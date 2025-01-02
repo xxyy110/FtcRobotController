@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 @Autonomous(name = "Mecanum Auto OpMode", group = "Autonomous")
-public class MechBotAutoMode extends LinearOpMode {
+public class MechBotAutoModeEncoder extends LinearOpMode {
 
     static final double     COUNTS_PER_MOTOR_REV    = 1120 ;    // eg: NeveRest40Gearmotor Motor Encoder
     static final double     DRIVE_GEAR_REDUCTION    = 1.0 ;     // No External Gearing.
@@ -97,7 +97,7 @@ public class MechBotAutoMode extends LinearOpMode {
         waitForStart();
 
         // Step: robot travels from wall to the center in distance
-        int newChamberTarget = (int)(ROBOT_TRAVEL_DISTANCE_IN_INCHES * COUNTS_PER_INCH);
+        int newChamberTarget = back_left_motor.getCurrentPosition() + (int)(ROBOT_TRAVEL_DISTANCE_IN_INCHES * COUNTS_PER_INCH);
         back_left_motor.setTargetPosition(newChamberTarget);
         back_right_motor.setTargetPosition(newChamberTarget);
         front_left_motor.setTargetPosition(newChamberTarget);
@@ -109,15 +109,23 @@ public class MechBotAutoMode extends LinearOpMode {
         front_right_motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         runTime.reset();
-        moveRobot(ROBOT_TRAVEL_POWER, 0, 0);
+//        moveRobot(ROBOT_TRAVEL_POWER, 0, 0);
+        back_left_motor.setPower(ROBOT_TRAVEL_POWER);
+        back_right_motor.setPower(ROBOT_TRAVEL_POWER);
+        front_left_motor.setPower(ROBOT_TRAVEL_POWER);
+        front_right_motor.setPower(ROBOT_TRAVEL_POWER);
+
+        telemetry.addData("Target position: ", "%7d", newChamberTarget);
 
         while (opModeIsActive() && (runTime.seconds() < ROBOT_TRAVEL_TIME_IN_SECONDS) &&
                 (back_left_motor.isBusy() && back_right_motor.isBusy() &&
                         front_left_motor.isBusy() && front_right_motor.isBusy())) {
+            telemetry.addData("Status", "Current position: %7d", back_left_motor.getCurrentPosition());
             telemetry.addData("Status", "Moving from wall to center for %f seconds", ROBOT_TRAVEL_TIME_IN_SECONDS);
             addMotorPowerData();
             telemetry.update();
         }
+        resetPower();
 
         // Step: robot viper up
         runTime.reset();
