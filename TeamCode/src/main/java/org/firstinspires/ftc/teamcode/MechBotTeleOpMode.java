@@ -32,8 +32,8 @@ public class MechBotTeleOpMode extends LinearOpMode {
         backRight = hardwareMap.get(DcMotor.class, "backRight");
         frontLeft = hardwareMap.get(DcMotor.class, "frontLeft");
         frontRight = hardwareMap.get(DcMotor.class, "frontRight");
-        clawArmServo = hardwareMap.get(CRServo.class, "clawArmServo");
-        rotationClawServo = hardwareMap.get(CRServo.class, "rotationClawServo");
+        clawArmServo = hardwareMap.get(CRServo.class, "clawarmservo");
+        rotationClawServo = hardwareMap.get(CRServo.class, "rotationclawservo");
 
         // Set zero power behavior
         viperSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
