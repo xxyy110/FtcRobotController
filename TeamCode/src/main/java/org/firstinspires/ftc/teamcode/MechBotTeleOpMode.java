@@ -8,6 +8,10 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 @TeleOp(name = "Mechbot Teleop", group = "Teleop")
 public class MechBotTeleOpMode extends LinearOpMode {
 
+    static final double VIPER_SLIDE_POWER_UP = 0.2;
+    static final double VIPER_SLIDE_POWER_DOWN = 0.2;
+
+
     private DcMotor viperSlide;
     private DcMotor leftViper;
     private DcMotor rightViper;
@@ -70,11 +74,11 @@ public class MechBotTeleOpMode extends LinearOpMode {
 
             // Viper arm control
             if (gamepad2.dpad_left) {
-                leftViper.setPower(-0.5);
-                rightViper.setPower(0.5);
+                leftViper.setPower(-VIPER_SLIDE_POWER_UP);
+                rightViper.setPower(VIPER_SLIDE_POWER_UP);
             } else if (gamepad2.dpad_right) {
-                leftViper.setPower(0.3);
-                rightViper.setPower(-0.3);
+                leftViper.setPower(VIPER_SLIDE_POWER_DOWN);
+                rightViper.setPower(-VIPER_SLIDE_POWER_DOWN);
             } else {
                 leftViper.setPower(0);
                 rightViper.setPower(0);
