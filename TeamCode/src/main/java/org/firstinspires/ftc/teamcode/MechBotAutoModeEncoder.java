@@ -23,9 +23,12 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
 
 
     static final double VIPER_POWER = 0.5; // in range between -1 to 1
-    static final double VIPER_SLIDE_UP_TIME_IN_SECONDS = 2.0;
-    static final double VIPER_SLIDE_DOWN_TIME_IN_SECONDS = 2.0;
-    static final double VIPER_SLIDE_LEAN_FORWARD_TIME_IN_SECONDS = 2.0;
+    static final int VIPER_SLIDE_TARGET_VERTICAL_POSITION = 100;
+    static final int VIPER_SLIDE_TARGET_HORIZONTAL_POSITION = 10;
+    static final double VIPER_SLIDE_UP_TIME_IN_SECONDS = 1.0;
+
+
+    static final double TRAVEL_FROM_WALL_TO_CENTER_IN_SECONDS = 5.0;
 
 
     static final double MAX_POWER = 1.0;  //Do NOT change this value
@@ -80,14 +83,13 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
 
         // Set viper motor mode
         // https://javadoc.io/doc/org.firstinspires.ftc/RobotCore/latest/com/qualcomm/robotcore/hardware/DcMotor.html
-        viperSlide.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        leftViper.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        rightViper.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        int viperInitVerticalPosition = viperSlide.getCurrentPosition();
+        int leftViperInitHorizontalPosition = leftViper.getCurrentPosition();
+        int rightViperInitHorizontalPosition = rightViper.getCurrentPosition();
 
 
         // Status update before the start
-        telemetry.addData("Status", "Setting Wheel motor run mode to RUN_USING_ENCODER completed");
-        telemetry.addData("Status", "Setting Viper motor run mode to RUN_WITHOUT_ENCODER completed");
+        telemetry.addData("Status", "Setting motor run mode to RUN_USING_ENCODER completed");
         telemetry.addData("Status", "Ready to start");
         telemetry.update();
 
@@ -107,14 +109,18 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
         front_right_motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         runTime.reset();
-        moveRobot(ROBOT_TRAVEL_POWER, 0, 0);
+//        moveRobot(ROBOT_TRAVEL_POWER, 0, 0);
+        back_left_motor.setPower(ROBOT_TRAVEL_POWER);
+        back_right_motor.setPower(ROBOT_TRAVEL_POWER);
+        front_left_motor.setPower(ROBOT_TRAVEL_POWER);
+        front_right_motor.setPower(ROBOT_TRAVEL_POWER);
 
         telemetry.addData("Target position: ", "%7d", newChamberTarget);
 
         while (opModeIsActive() && (runTime.seconds() < ROBOT_TRAVEL_TIME_IN_SECONDS) &&
                 (back_left_motor.isBusy() && back_right_motor.isBusy() &&
                         front_left_motor.isBusy() && front_right_motor.isBusy())) {
-            telemetry.addData("Status", "Current position: %7d", back_right_motor.getCurrentPosition());
+            telemetry.addData("Status", "Current position: %7d", back_left_motor.getCurrentPosition());
             telemetry.addData("Status", "Moving from wall to center for %f seconds", ROBOT_TRAVEL_TIME_IN_SECONDS);
             addMotorPowerData();
             telemetry.update();
@@ -123,25 +129,32 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
 
         // Step: robot viper up
         runTime.reset();
+        viperSlide.setTargetPosition(VIPER_SLIDE_TARGET_VERTICAL_POSITION);
+        viperSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         viperSlide.setPower(VIPER_POWER);
         while (runTime.seconds() < VIPER_SLIDE_UP_TIME_IN_SECONDS &&
                 opModeIsActive() && viperSlide.isBusy()) {
             telemetry.addData("Status: ", "Viper Slide Up.");
             telemetry.addData("Viper Slide Power", "%2f", viperSlide.getPower());
+            telemetry.addData("Viper Slide Position", "%7d", viperSlide.getCurrentPosition());
             telemetry.update();
         }
 
-        sleep(1000); // Sleep 1 seconds
-
         // Step: robot viper leans towards the high chamber
         runTime.reset();
-        leftViper.setPower(-VIPER_POWER);
+        leftViper.setTargetPosition(-VIPER_SLIDE_TARGET_HORIZONTAL_POSITION);
+        rightViper.setTargetPosition(VIPER_SLIDE_TARGET_HORIZONTAL_POSITION);
+        leftViper.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightViper.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        leftViper.setPower(VIPER_POWER);
         rightViper.setPower(VIPER_POWER);
-        while (runTime.seconds() < VIPER_SLIDE_LEAN_FORWARD_TIME_IN_SECONDS &&
+        while (runTime.seconds() < VIPER_SLIDE_UP_TIME_IN_SECONDS &&
                 opModeIsActive() && leftViper.isBusy() && rightViper.isBusy()) {
             telemetry.addData("Status: ","Viper Slide Leaning Towards High Chamber.");
             telemetry.addData("Left Viper Power", "%2f", leftViper.getPower());
+            telemetry.addData("Left Viper Position", "%7d", leftViper.getCurrentPosition());
             telemetry.addData("Right Viper Power", "%2f", rightViper.getPower());
+            telemetry.addData("Right Viper Position", "%7d", rightViper.getCurrentPosition());
             telemetry.update();
         }
 
@@ -149,23 +162,32 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
 
         // Step: robot viper resets to initial horizontal position
         runTime.reset();
+        leftViper.setTargetPosition(leftViperInitHorizontalPosition);
+        rightViper.setTargetPosition(rightViperInitHorizontalPosition);
+        leftViper.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightViper.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         leftViper.setPower(VIPER_POWER);
-        rightViper.setPower(-VIPER_POWER);
-        while (runTime.seconds() < VIPER_SLIDE_LEAN_FORWARD_TIME_IN_SECONDS &&
+        rightViper.setPower(VIPER_POWER);
+        while (runTime.seconds() < VIPER_SLIDE_UP_TIME_IN_SECONDS &&
                 opModeIsActive() && leftViper.isBusy() && rightViper.isBusy()) {
             telemetry.addData("Status: ","Viper Slide Resetting to Initial Horizontal Position.");
             telemetry.addData("Left Viper Power", "%2f", leftViper.getPower());
+            telemetry.addData("Left Viper Position", "%7d", leftViper.getCurrentPosition());
             telemetry.addData("Right Viper Power", "%2f", rightViper.getPower());
+            telemetry.addData("Right Viper Position", "%7d", rightViper.getCurrentPosition());
             telemetry.update();
         }
 
         // Step: robot viper slides down
         runTime.reset();
+        viperSlide.setTargetPosition(viperInitVerticalPosition);
+        viperSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         viperSlide.setPower(VIPER_POWER);
-        while (runTime.seconds() < VIPER_SLIDE_DOWN_TIME_IN_SECONDS &&
+        while (runTime.seconds() < VIPER_SLIDE_UP_TIME_IN_SECONDS &&
                 opModeIsActive() && viperSlide.isBusy()) {
             telemetry.addData("Status: ","Viper Slide Down.");
             telemetry.addData("Viper Slide Power", "%2f", viperSlide.getPower());
+            telemetry.addData("Viper Slide Position", "%7d", viperSlide.getCurrentPosition());
             telemetry.update();
         }
 
