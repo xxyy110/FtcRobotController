@@ -8,6 +8,15 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 @Autonomous(name = "Mecanum Auto OpMode", group = "Autonomous")
 public class MechBotAutoModeEncoder extends LinearOpMode {
 
+    // Robot travels distance in inches
+    static final double ROBOT_TRAVEL_DISTANCE_IN_INCHES = 24.0;
+    // Viper extension length in inches
+    static final double VIPER_EXTENSION_LENGTH_IN_INCHES = 12.0;
+    // Chamber height in inches
+    static final double CHAMBER_HEIGHT_IN_INCHES = 10.0;
+
+
+
     static final double     COUNTS_PER_MOTOR_REV    = 1120 ;    // eg: NeveRest40Gearmotor Motor Encoder
     static final double     DRIVE_GEAR_REDUCTION    = 1.0 ;     // No External Gearing.
     static final double     WHEEL_DIAMETER_INCHES   = 4.0 ;     // For figuring circumference
@@ -18,17 +27,11 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
     // Update power and travel time accordingly
     static final double ROBOT_TRAVEL_POWER = 0.5;  // in range between -1 to 1
 
-    static final double ROBOT_TRAVEL_TIME_IN_SECONDS = 12.0;
-    static final double ROBOT_TRAVEL_DISTANCE_IN_INCHES = 24.0;
+    static final double ROBOT_TRAVEL_TIME_IN_SECONDS = 5.0;
 
 
-    static final double VIPER_POWER = 0.5; // in range between -1 to 1
-    static final int VIPER_SLIDE_TARGET_VERTICAL_POSITION = 100;
-    static final int VIPER_SLIDE_TARGET_HORIZONTAL_POSITION = 10;
+    static final double VIPER_POWER = 0.1; // in range between -1 to 1
     static final double VIPER_SLIDE_UP_TIME_IN_SECONDS = 1.0;
-
-
-    static final double TRAVEL_FROM_WALL_TO_CENTER_IN_SECONDS = 5.0;
 
 
     static final double MAX_POWER = 1.0;  //Do NOT change this value
@@ -40,12 +43,6 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
     DcMotor leftViper;
     DcMotor rightViper;
     DcMotor viperSlide;
-
-
-    // Initialize drive, strafe, and rotate variables
-    private double drive = 0;
-    private double strafe = 0;
-    private double rotate = 0;
 
 
     @Override
@@ -60,6 +57,11 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
         rightViper = hardwareMap.get(DcMotor.class, "rightViper");
         viperSlide = hardwareMap.get(DcMotor.class, "viperSlide");
 
+        // Set viper zero power behavior
+        setVipersZeroPowerBehavior();
+
+        // Set Wheels zero power behavior
+        setWheelsZeroPowerBehavior();
 
         // Set motor run mode to RUN_USING_ENCODER
         back_left_motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -76,13 +78,17 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
                 front_left_motor.getCurrentPosition(), front_right_motor.getCurrentPosition());
 
 
-        // Set zero power behavior
-        viperSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        leftViper.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        rightViper.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Set viper motor mode
         // https://javadoc.io/doc/org.firstinspires.ftc/RobotCore/latest/com/qualcomm/robotcore/hardware/DcMotor.html
+        viperSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftViper.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightViper.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        viperSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        leftViper.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightViper.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
         int viperInitVerticalPosition = viperSlide.getCurrentPosition();
         int leftViperInitHorizontalPosition = leftViper.getCurrentPosition();
         int rightViperInitHorizontalPosition = rightViper.getCurrentPosition();
@@ -98,6 +104,8 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
 
         // Step: robot travels from wall to the center in distance
         int newChamberTarget = back_left_motor.getCurrentPosition() + (int)(ROBOT_TRAVEL_DISTANCE_IN_INCHES * COUNTS_PER_INCH);
+        telemetry.addData("Target position: ", "%7d", newChamberTarget);
+
         back_left_motor.setTargetPosition(newChamberTarget);
         back_right_motor.setTargetPosition(newChamberTarget);
         front_left_motor.setTargetPosition(newChamberTarget);
@@ -109,13 +117,8 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
         front_right_motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         runTime.reset();
-//        moveRobot(ROBOT_TRAVEL_POWER, 0, 0);
-        back_left_motor.setPower(ROBOT_TRAVEL_POWER);
-        back_right_motor.setPower(ROBOT_TRAVEL_POWER);
-        front_left_motor.setPower(ROBOT_TRAVEL_POWER);
-        front_right_motor.setPower(ROBOT_TRAVEL_POWER);
+        moveRobot(ROBOT_TRAVEL_POWER, 0, 0);
 
-        telemetry.addData("Target position: ", "%7d", newChamberTarget);
 
         while (opModeIsActive() && (runTime.seconds() < ROBOT_TRAVEL_TIME_IN_SECONDS) &&
                 (back_left_motor.isBusy() && back_right_motor.isBusy() &&
@@ -125,11 +128,12 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
             addMotorPowerData();
             telemetry.update();
         }
-        resetPower();
+        resetWheelsPower();
 
         // Step: robot viper up
         runTime.reset();
-        viperSlide.setTargetPosition(VIPER_SLIDE_TARGET_VERTICAL_POSITION);
+        int viperSlideExtensionTarget = viperSlide.getCurrentPosition() + (int)(VIPER_EXTENSION_LENGTH_IN_INCHES * COUNTS_PER_INCH);
+        viperSlide.setTargetPosition(viperSlideExtensionTarget);
         viperSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         viperSlide.setPower(VIPER_POWER);
         while (runTime.seconds() < VIPER_SLIDE_UP_TIME_IN_SECONDS &&
@@ -139,15 +143,27 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
             telemetry.addData("Viper Slide Position", "%7d", viperSlide.getCurrentPosition());
             telemetry.update();
         }
+        viperSlide.setPower(0);  //viper stops and brakes
 
         // Step: robot viper leans towards the high chamber
+
+        // Calculate side b using the Pythagorean Theorem: b = sqrt(c^2 - a^2)
+        double parkingDistanceToChamberInInches = Math.sqrt(Math.pow(VIPER_EXTENSION_LENGTH_IN_INCHES, 2) - Math.pow(CHAMBER_HEIGHT_IN_INCHES, 2));
+        int leftViperSlideToTarget = leftViper.getCurrentPosition() + (int)(parkingDistanceToChamberInInches * COUNTS_PER_INCH);
+        int rightViperSlideToTarget = rightViper.getCurrentPosition() - (int)(parkingDistanceToChamberInInches * COUNTS_PER_INCH);
+
+        telemetry.addData("Left Viper Target Position", "%7d", leftViperSlideToTarget);
+        telemetry.addData("Right Viper Target Position", "%7d", rightViperSlideToTarget);
+
         runTime.reset();
-        leftViper.setTargetPosition(-VIPER_SLIDE_TARGET_HORIZONTAL_POSITION);
-        rightViper.setTargetPosition(VIPER_SLIDE_TARGET_HORIZONTAL_POSITION);
+        leftViper.setTargetPosition(leftViperSlideToTarget);
+        rightViper.setTargetPosition(rightViperSlideToTarget);
         leftViper.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         rightViper.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        leftViper.setPower(VIPER_POWER);
+        leftViper.setPower(-VIPER_POWER);
         rightViper.setPower(VIPER_POWER);
+
+
         while (runTime.seconds() < VIPER_SLIDE_UP_TIME_IN_SECONDS &&
                 opModeIsActive() && leftViper.isBusy() && rightViper.isBusy()) {
             telemetry.addData("Status: ","Viper Slide Leaning Towards High Chamber.");
@@ -157,6 +173,9 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
             telemetry.addData("Right Viper Position", "%7d", rightViper.getCurrentPosition());
             telemetry.update();
         }
+        // Viper stops and brakes
+        leftViper.setPower(0);
+        rightViper.setPower(0);
 
         sleep(2000); //Sleep 2 seconds
 
@@ -164,10 +183,15 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
         runTime.reset();
         leftViper.setTargetPosition(leftViperInitHorizontalPosition);
         rightViper.setTargetPosition(rightViperInitHorizontalPosition);
+
+        telemetry.addData("Left Viper Target Position", "%7d", leftViperInitHorizontalPosition);
+        telemetry.addData("Right Viper Target Position", "%7d", rightViperInitHorizontalPosition);
+
         leftViper.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         rightViper.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         leftViper.setPower(VIPER_POWER);
-        rightViper.setPower(VIPER_POWER);
+        rightViper.setPower(-VIPER_POWER);
+
         while (runTime.seconds() < VIPER_SLIDE_UP_TIME_IN_SECONDS &&
                 opModeIsActive() && leftViper.isBusy() && rightViper.isBusy()) {
             telemetry.addData("Status: ","Viper Slide Resetting to Initial Horizontal Position.");
@@ -177,12 +201,17 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
             telemetry.addData("Right Viper Position", "%7d", rightViper.getCurrentPosition());
             telemetry.update();
         }
+        leftViper.setPower(0);
+        rightViper.setPower(0);
 
         // Step: robot viper slides down
         runTime.reset();
         viperSlide.setTargetPosition(viperInitVerticalPosition);
+        telemetry.addData("Viper Slide Target Position", "%7d", viperInitVerticalPosition);
+
+
         viperSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        viperSlide.setPower(VIPER_POWER);
+        viperSlide.setPower(-VIPER_POWER);
         while (runTime.seconds() < VIPER_SLIDE_UP_TIME_IN_SECONDS &&
                 opModeIsActive() && viperSlide.isBusy()) {
             telemetry.addData("Status: ","Viper Slide Down.");
@@ -190,11 +219,12 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
             telemetry.addData("Viper Slide Position", "%7d", viperSlide.getCurrentPosition());
             telemetry.update();
         }
+        viperSlide.setPower(0);
 
         sleep(2000);
 
 
-        resetPower();
+        resetWheelsPower();
         telemetry.addData("Status", "Completed");
         telemetry.update();
 
@@ -235,15 +265,24 @@ public class MechBotAutoModeEncoder extends LinearOpMode {
         front_right_motor.setPower(frontRightPower);
     }
 
-    private void resetPower() {
+    private void resetWheelsPower() {
         back_left_motor.setPower(0);
         back_right_motor.setPower(0);
         front_left_motor.setPower(0);
         front_right_motor.setPower(0);
+    }
 
-        drive = 0;
-        strafe = 0;
-        rotate = 0;
+    private void setVipersZeroPowerBehavior() {
+        viperSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        leftViper.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rightViper.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+    }
+
+    private void setWheelsZeroPowerBehavior() {
+        back_left_motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        back_right_motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        front_left_motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        front_right_motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
 
     private void addMotorPowerData() {
